@@ -7,28 +7,23 @@ contract Donation {
 
     address public minter;
 
-    address[] public donorsAddresses;
-
-    address[] public doneesAddresses;
+    uint256 public numOfbeneficiaries;
 
     struct benefactor {
-        address donee;
         uint256 contribution;
     }
 
-    // mapping  is a collection of key value pairs,
-    // similar to objects in javascript.
-    mapping(address => benefactor[]) public benefactors;
-
-    // id should be conerted to hex outside solidity
-    // id ~ 0x2343 => 2343
+    // case-id should be conerted to hex outside solidity
+    // case-id ~ 2343 => 0x2343
     struct beneficiary {
-        bytes2 Case_id;
+        mapping(address => benefactor) benefactors;
+        address donee;
         uint256 donations;
         bool isActive;
+        uint256 numOfDonors;
     }
 
-    mapping(address => beneficiary[]) public beneficiaries;
+    mapping(bytes2 => beneficiary) public beneficiaries;
 
     event Sent(address from, address to, uint256 amount);
 
@@ -38,104 +33,75 @@ contract Donation {
         minter = msg.sender;
     }
 
-    // Sends an amount of newly created coins to an
-    // address can only be called by the minter
+    // donate method can only be called by the minter
 
     function donate(
-        bytes2 _Case_id,
+        bytes2 _case_id,
         address _donee,
         address _donor,
         uint256 _amount
-    ) public returns (bool) {
+    ) public {
         require(
             msg.sender == minter,
             "This function is available only by minter"
         );
         require(_amount < 1e60, "Overflow Error");
 
-        if (donorNumOfDonations(_donee) == 0) {
-            // keeping track of doners
-            donorsAddresses.push(_donor);
-        }
+        uint256 contribution = contribution(_case_id, _donor);
+        uint256 donations = donations(_case_id);
 
-        if (donorNumOfDonations(_donee) > 0) {
-            for (uint256 i = 0; i < beneficiaries[_donee].length; i++) {
-                if (beneficiaries[_donee][i].Case_id == _Case_id) {
-                    if (beneficiaries[_donee][i].isActive) {
-                        beneficiaries[_donee][i].donations += _amount;
-                        benefactors[_donor].push(benefactor(_donee, _amount));
-
-                        // success
-                        return true;
-                    } else {
-                        // means the case is not active.
-                        return false;
-                    }
-
-                }
+        if (contribution > 0) {
+            if (isActive(_case_id)) {
+                beneficiaries[_case_id].benefactors[_donor] = benefactor(
+                    (contribution + _amount)
+                );
+                beneficiaries[_case_id].donations = donations + _amount;
             }
-
-            // add a new donation struct into the beneficiary array
-            beneficiaries[_donee].push(beneficiary(_Case_id, _amount, true));
-            benefactors[_donor].push(benefactor(_donee, _amount));
-
-            // success
-            return true;
         } else {
-            // keeping track of donees
-            doneesAddresses.push(_donee);
-
-            beneficiaries[_donee].push(beneficiary(_Case_id, _amount, true));
-            benefactors[_donor].push(benefactor(_donee, _amount));
-
-            // success
-            return true;
+            if (donations > 0) {
+                beneficiaries[_case_id].benefactors[_donor] = benefactor(
+                    _amount
+                );
+                beneficiaries[_case_id].donations = donations + _amount;
+                beneficiaries[_case_id].numOfDonors++;
+            } else {
+                beneficiaries[_case_id].benefactors[_donor] = benefactor(
+                    _amount
+                );
+                beneficiaries[_case_id].donee = _donee;
+                beneficiaries[_case_id].donations = _amount;
+                beneficiaries[_case_id].isActive = true;
+                beneficiaries[_case_id].numOfDonors++;
+                numOfbeneficiaries++;
+            }
         }
     }
 
-    function donorTotalDonations(address _donor) public view returns (uint256) {
-        uint256 balance;
-        for (uint256 i = 0; i < benefactors[_donor].length; i++) {
-            balance += benefactors[_donor][i].contribution;
-        }
-
-        return balance;
+    function donations(bytes2 _case_id) public view returns (uint256) {
+        return beneficiaries[_case_id].donations;
     }
 
-    function donorNumOfDonations(address _donor) public view returns (uint256) {
-        return benefactors[_donor].length;
-    }
-
-    function getMyTotalDonations() public view returns (uint256) {
-        return donorTotalDonations(msg.sender);
-    }
-
-    function getMyNumOfDonations() public view returns (uint256) {
-        return donorNumOfDonations(msg.sender);
-    }
-
-    // need work
-    function isDonor(address _donee, address _donor)
+    function contribution(bytes2 _case_id, address _donor)
         public
         view
-        returns (bool)
+        returns (uint256)
     {
-        return false;
+        return beneficiaries[_case_id].benefactors[_donor].contribution;
     }
 
-    function isDonee(address _address) public view returns (bool) {
-        return false;
+    function isActive(bytes2 _case_id) public view returns (bool) {
+        return beneficiaries[_case_id].isActive;
     }
 
-    function isActive(address _address) public view returns (bool) {
-        return false;
+    function doneeAddress(bytes2 _case_id) public view returns (address) {
+        return beneficiaries[_case_id].donee;
     }
 
-    function getMyAddress() public view returns (address) {
-        return msg.sender;
+    function numOfDonors(bytes2 _case_id) public view returns (uint256) {
+        return beneficiaries[_case_id].numOfDonors;
     }
 
-    function numOfDonors() public view returns (uint256) {
-        return donorsAddresses.length;
+    function getMycontribution(bytes2 _case_id) public view returns (uint256) {
+        return contribution(_case_id, msg.sender);
     }
 }
