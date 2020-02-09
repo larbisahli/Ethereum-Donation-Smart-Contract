@@ -51,12 +51,11 @@ contract Donation {
         uint256 donations = donations(_case_id);
 
         if (contribution > 0) {
-            if (isActive(_case_id)) {
-                beneficiaries[_case_id].benefactors[_donor] = benefactor(
-                    (contribution + _amount)
-                );
-                beneficiaries[_case_id].donations = donations + _amount;
-            }
+            require(isActive(_case_id), "The donee is not active.");
+            beneficiaries[_case_id].benefactors[_donor] = benefactor(
+                (contribution + _amount)
+            );
+            beneficiaries[_case_id].donations = donations + _amount;
         } else {
             if (donations > 0) {
                 beneficiaries[_case_id].benefactors[_donor] = benefactor(
@@ -75,6 +74,15 @@ contract Donation {
                 numOfbeneficiaries++;
             }
         }
+    }
+
+    function doneeDeactivate(bytes2 _case_id) public returns (bool) {
+        require(
+            msg.sender == minter,
+            "This function is available only by minter"
+        );
+        require(isActive(_case_id), "Donee already not active.");
+        return beneficiaries[_case_id].isActive = false;
     }
 
     function donations(bytes2 _case_id) public view returns (uint256) {
