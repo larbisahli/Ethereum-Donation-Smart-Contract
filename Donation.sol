@@ -3,10 +3,8 @@ pragma solidity >=0.5.0 <0.7.0;
 contract Donation {
     // creating a state varaibles
 
-    string public CurrencySymbol = "MAD";
-
+    string constant public Currency = "MAD";
     address public minter;
-
     uint256 public numOfbeneficiaries;
 
     struct benefactor {
@@ -31,6 +29,7 @@ contract Donation {
 
     constructor() public {
         minter = msg.sender;
+       
     }
 
     // donate method can only be called by the minter
@@ -53,9 +52,9 @@ contract Donation {
         if (contribution > 0) {
             require(isActive(_case_id), "The donee is not active.");
             beneficiaries[_case_id].benefactors[_donor] = benefactor(
-                (contribution + _amount)
-            );
-            beneficiaries[_case_id].donations = donations + _amount;
+                    (contribution + _amount)
+                );
+                beneficiaries[_case_id].donations = donations + _amount;
         } else {
             if (donations > 0) {
                 beneficiaries[_case_id].benefactors[_donor] = benefactor(
@@ -76,12 +75,12 @@ contract Donation {
         }
     }
 
-    function doneeDeactivate(bytes2 _case_id) public returns (bool) {
+    function doneeDeactivate(bytes2 _case_id) public returns (bool){
         require(
             msg.sender == minter,
             "This function is available only by minter"
         );
-        require(isActive(_case_id), "Donee already not active.");
+        require(isActive(_case_id), "Donee not active.");
         return beneficiaries[_case_id].isActive = false;
     }
 
@@ -112,4 +111,5 @@ contract Donation {
     function getMycontribution(bytes2 _case_id) public view returns (uint256) {
         return contribution(_case_id, msg.sender);
     }
+    
 }
